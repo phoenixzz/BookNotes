@@ -1,0 +1,27 @@
+---
+　　layout: default
+　　title: 游戏引擎资源命名常用规则
+---
+
+　　<h2>{{ page.title }}</h2>
+
+　　<p>原文见<a href="http://bitsquid.blogspot.se/2014/06/what-is-in-name.html">http://bitsquid.blogspot.se/2014/06/what-is-in-name.html</a></p>
+	<p> </p>
+	
+	<h4>三种方案：</h4>
+	<ul>
+	  <li>文件路径</li>
+			<p> 重命名资源的时候会有问题，引用到该资源的所有其他资源都需要更新，
+			  一般通过工具更新所有资源文件的引用来解决
+		  	</p>
+	  <li>GUID</li>
+			<p> 一般在编译期生成资源的GUID，以及该GUID到实际文件的索引映射，但copy文件会有问题，因为GUID一样；
+				GUID一般伴随原始资源，存在metadata文件中。<br\>
+				最大的问题在于可读性差，通过GUID获得不了任何可用信息。
+			</p>
+	  <li>名字（别名）</li>
+	  		<p> 问题依然存在，且存在名字与实际资源完全对不起来的问题
+		  	</p>
+	</ul>
+
+　　<p>{{ page.date | date_to_string }}</p>
