@@ -36,18 +36,18 @@
 		<p>
 			下面代码可以参考
 		</p>
-		<pre><code class="codeblock">
+		<pre><code class="cpp">
 			
-			float3 reconstructPos(Texture2D depthTexture, float2 texCoord, float4x4 matrixProjectionInverted )
-			{
-				float depth = 1-depthTexture.Sample( samplerDefault, texCoord ).r;
-					
-				float2 cspos = float2(texCoord.x * 2 - 1, (1-texCoord.y) * 2 - 1);
-				float4 depthCoord = float4(cspos, depth, 1);
-				depthCoord = mul (matrixProjectionInverted, depthCoord);
-				
-				return depthCoord.xyz / depthCoord.w;
-			}
+float3 reconstructPos(Texture2D depthTexture, float2 texCoord, float4x4 matrixProjectionInverted )
+{
+	float depth = 1-depthTexture.Sample( samplerDefault, texCoord ).r;
+		
+	float2 cspos = float2(texCoord.x * 2 - 1, (1-texCoord.y) * 2 - 1);
+	float4 depthCoord = float4(cspos, depth, 1);
+	depthCoord = mul (matrixProjectionInverted, depthCoord);
+	
+	return depthCoord.xyz / depthCoord.w;
+}
 		
 		</code></pre>
 		
@@ -56,7 +56,7 @@
 		<p>
 			下面代码是SSE实现
 		</p>
-		<pre><code class="codeblock">
+		<pre><code class="cpp">
 			
 static const int sBBIndexList[36] =
 {
