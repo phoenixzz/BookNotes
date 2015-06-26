@@ -16,7 +16,8 @@
 		
 		<p> 通过EntityManager类来管理 Entity， entity ID作为弱引用，因此，当entity 删除的时候不需要通知引用它的物体 </p>
 		<p> 使用的时候，需要通过EntityManager来检查该entity是否有效 </p>
-		<p> ID即index采用30位，分为index与generation 两部分，index为22位，gen为8位（种类） </p>
+		<p> ID即index采用30位，分为index与generation 两部分，index为22位，gen为8位（种类）。</p>
+		
 		<pre><code class="cpp">
 	const unsigned ENTITY_INDEX_BITS = 22;
 	const unsigned ENTITY_INDEX_MASK = (1<<ENTITY_INDEX_BITS)-1;
@@ -31,7 +32,7 @@
 	 unsigned index() const {return id & ENTITY_INDEX_MASK;}
 	 unsigned generation() const {return (id >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK;}
 	};
-		</code></pre>		
+		</code></pre>
 		<p> 因为ID可以重用，为了防止冲突，建立一个_free_indices栈，用于存放循环使用的ID<br />
 			当栈中元素包含至少MINIMUM_FREE_INDICES = 1024个时，只取栈里的ID来重复使用<br />
 			<i>Since we have 256 generations, an ID will never reappear until its index has run 256 laps through the queue.<br />
