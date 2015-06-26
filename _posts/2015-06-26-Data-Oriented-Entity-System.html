@@ -1,0 +1,161 @@
+---
+　　layout: default
+　　title: 面向数据驱动的Entity系统设计
+---
+
+　　<h2>{{ page.title }}</h2>
+
+	<h4>Entity 结构：</h4>
+		<p> 不是从堆上分配出来的object，而只是一个整数ID </p>
+		<pre><code class="cpp">
+	struct Entity
+	{
+	 	unsigned int32 id;
+	};
+		</code></pre>
+		
+		<p> 通过EntityManager类来管理 Entity， entity ID作为弱引用，因此，当entity 删除的时候不需要通知引用它的物体 </p>
+		<p> 使用的时候，需要通过EntityManager来检查该entity是否有效 </p>
+		<p> ID即index采用30位，分为index与generation 两部分，index为22位，gen为8位（种类） </p>
+		<pre><code class="cpp">
+	const unsigned ENTITY_INDEX_BITS = 22;
+	const unsigned ENTITY_INDEX_MASK = (1<<ENTITY_INDEX_BITS)-1;
+	
+	const unsigned ENTITY_GENERATION_BITS = 8;
+	const unsigned ENTITY_GENERATION_MASK = (1<<ENTITY_GENERATION_BITS)-1;
+	
+	struct Entity
+	{
+	 unsigned id;
+	
+	 unsigned index() const {return id & ENTITY_INDEX_MASK;}
+	 unsigned generation() const {return (id >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK;}
+	};
+		</code></pre>		
+		<p> 因为ID可以重用，为了防止冲突，建立一个_free_indices栈，用于存放循环使用的ID<br />
+			当栈中元素包含至少MINIMUM_FREE_INDICES = 1024个时，只取栈里的ID来重复使用<br />
+			<i>Since we have 256 generations, an ID will never reappear until its index has run 256 laps through the queue.<br />
+			 So this means that you must create and destroy at least 256 * 1024 entities until an ID can reappear. </i>
+		</p>
+		<p> 类EntityManager的代码如下： </p>
+		<pre><code class="cpp">
+	class EntityManager
+	{
+	 Array<unsigned char> _generation;
+	 Deque<unsigned> _free_indices;
+	
+	public:
+	 Entity create()
+	 {
+	  unsigned idx;
+	  if (_free_indices.size() > MINIMUM_FREE_INDICES) {
+	   idx = _free_indices.front();
+	   _free_indices.pop_front();
+	  } else {
+	   _generation.push_back(0);
+	   idx = _generation.size() - 1;
+	   XENSURE(idx < (1 << ENTITY_INDEX_BITS));
+	  }
+	  return make_entity(idx, _generation[idx]);
+	 }
+	
+	 bool alive(Entity e) const
+	 {
+	  return _generation[e.index()] == e.generation();
+	 }
+	
+	 void destroy(Entity e)
+	 {
+	  const unsigned idx = e.index();
+	  ++_generation[idx];
+	  _free_indices.push_back(idx);
+	 }
+	};			
+		</code></pre>
+		
+		
+	<h4>Component，组件系统：</h4>	
+	<p> 还是主要考虑内存排列紧凑以及cache友好，可以将多个数组安放在一个连续的内存块里，例子如下面代码：</p>
+		<pre><code class="cpp">
+	struct InstanceData {
+	    unsigned n;          ///< Number of used instances.
+	    unsigned allocated;  ///< Number of allocated instances.
+	    void *buffer;        ///< Buffer with instance data.
+	
+	    Entity *entity;
+	    float *mass;
+	    Vector3 *position;
+	    Vector3 *velocity;
+	    Vector3 *acceleration;
+	};
+	InstanceData _data;
+	
+	void allocate(unsigned sz)
+	{
+	    assert(sz > _data.n);
+	
+	    InstanceData new_data;
+	    const unsigned bytes = sz * (sizeof(Entity) + sizeof(float) +
+	        3 * sizeof(Vector3));
+	    new_data.buffer = _allocator.allocate(bytes);
+	    new_data.n = _data.n;
+	    new_data.allocated = sz;
+	
+	    new_data.entity = (Entity *)(new_data.buffer);
+	    new_data.mass = (float *)(new_data.entity + sz);
+	    new_data.position = (Vector3 *)(new_data.mass + sz);
+	    new_data.velocity = new_data.position + sz;
+	    new_data.acceleration = new_data.velocity + sz;
+	
+	    memcpy(new_data.entity, _data.entity, _data.n * sizeof(Entity));
+	    mempcy(new_data.mass, _data.mass, _data.n * sizeof(float));
+	    memcpy(new_data.position, _data.position, _data.n * sizeof(Vector3));
+	    memcpy(new_data.velocity, _data.velocity, _data.n * sizeof(Vector3));
+	    memcpy(new_data.acceleration, _data.acceleration,
+	        _data.n * sizeof(Vector3));
+	
+	    _allocator.deallocate(_data.buffer);
+	    _data = new_data;
+	}			
+		</code></pre>	
+	<p> 从Entity获取component数据 使用HashMap<Entity, unsigned int32> _map;</p>	
+	<p> 销毁component，为了保证内存没有空洞，将最后一个有效数据与删除数据交换，同时保证_map Hash正确</p>	
+		<pre><code class="cpp">
+	void destroy(unsigned i)
+	{
+	    unsigned last = _data.n - 1;
+	    Entity e = _data.entity[i];
+	    Entity last_e = _data.entity[last];
+	
+	    _data.entity[i] = _data.entity[last];
+	    _data.mass[i] = _data.mass[last];
+	    _data.position[i] = _data.position[last];
+	    _data.velocity[i] = _data.velocity[last];
+	    _data.acceleration[i] = _data.acceleration[last];
+	
+	    _map[last_e] =  i;
+	    _map.erase(e);
+	
+	    --_n;
+	}			
+		</code></pre>
+	<p> 对于简单的component， 当Entity删除的时候可以不需要立即销毁component，可以在gc的时候删除</p>
+		<pre><code class="cpp">
+	void gc(const EntityManager &em)
+	{
+	    unsigned alive_in_row = 0;
+	    while (_data.n > 0 && alive_in_row < 4) {
+	        unsigned i = random_in_range(0, _data.n - 1);
+	        if (em.alive(_data.entity[i])) {
+	            ++alive_in_row;
+	            continue;
+	        }
+	        alive_in_row = 0;
+	        destroy(i);
+	    }
+	}			
+		</code></pre>
+	<p><i>The nice thing about this code is that it cost almost nothing if there are no destroyed entities (just four passes of the loop).<br />
+	 But when there are a lot of destroyed entities the components will be quickly destroyed. </i>
+	</p>	
+　　<p>{{ page.date | date_to_string }}</p>
