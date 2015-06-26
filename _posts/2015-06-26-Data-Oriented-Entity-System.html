@@ -20,17 +20,17 @@
 		
 		<pre><code class="cpp">
 	const unsigned ENTITY_INDEX_BITS = 22;
-	const unsigned ENTITY_INDEX_MASK = (1<<ENTITY_INDEX_BITS)-1;
+	const unsigned ENTITY_INDEX_MASK = (1 < < ENTITY_INDEX_BITS)-1;
 	
 	const unsigned ENTITY_GENERATION_BITS = 8;
-	const unsigned ENTITY_GENERATION_MASK = (1<<ENTITY_GENERATION_BITS)-1;
+	const unsigned ENTITY_GENERATION_MASK = (1 < < ENTITY_GENERATION_BITS)-1;
 	
 	struct Entity
 	{
 	 unsigned id;
 	
 	 unsigned index() const {return id & ENTITY_INDEX_MASK;}
-	 unsigned generation() const {return (id >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK;}
+	 unsigned generation() const {return (id > > ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK;}
 	};
 		</code></pre>
 		<p> 因为ID可以重用，为了防止冲突，建立一个_free_indices栈，用于存放循环使用的ID<br />
