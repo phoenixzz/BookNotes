@@ -7,7 +7,7 @@
 
 	<h4>目标：</h4>
 		<p> 确保内存线性分布和存储；减少内存申请释放的频率 </p>
-		<p> 支持的数据类型有bool float strings objects arrays of numbers</p>
+		<p> 支持的数据类型有bool, float, strings, objects, arrays of numbers</p>
 		<p> 最初的定义如下： </p>
 		<pre><code class="cpp">
 	enum class DataType {BOOL, FLOAT, STRING, OBJECT, ARRAY};
@@ -18,8 +18,8 @@
 	        bool b;
 	        float f;
 	        std::string *s;
-	        std::vector<float> *array;
-	        std::map<std::string, DataValue> *object;
+	        std::vector&lt;float&gt; *array;
+	        std::map&lt;std::string, DataValue&gt; *object;
 	    };
 	};	
 		</code></pre>
@@ -43,10 +43,10 @@
 	        bool b;
 	        float f;
 	        std::string *s;
-	        std::vector<float> *array;
+	        std::vector&lt;float&gt; *array;
 	    };
 	};
-	std::vector<Entry> data;
+	std::vector&lt;Entry&gt; data;
 		</code></pre>
 		<p> 查找key可以线性查找vector，可以排序这个数组进行二分查找，会更快 </p>
 		
@@ -59,12 +59,12 @@
 	        bool b;
 	        float f;
 	        std::string *s;
-	        std::vector<float> *array;
+	        std::vector&lt;float> *array;
 	    }
 	};
-	std::vector<unsigned> keys;
-	std::vector<DataType> types;
-	std::vector<Value> values;			
+	std::vector&lt;unsigned&gt; keys;
+	std::vector&lt;DataType&gt; types;
+	std::vector&lt;Value&gt; values;			
 		</code></pre>
 		<p> 目的是查找key时可以chche友好 </p>
 	
