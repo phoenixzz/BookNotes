@@ -1,0 +1,136 @@
+---
+　　layout: default
+　　title: 动态数据的内存分配系统设计
+---
+
+　　<h2>{{ page.title }}</h2>
+
+	<h4>目标：</h4>
+		<p> 确保内存线性分布和存储；减少内存申请释放的频率 </p>
+		<p> 支持的数据类型有bool float strings objects arrays of numbers</p>
+		<p> 最初的定义如下： </p>
+		<pre><code class="cpp">
+	enum class DataType {BOOL, FLOAT, STRING, OBJECT, ARRAY};
+	struct DataValue
+	{
+	    DataType type;
+	    union {
+	        bool b;
+	        float f;
+	        std::string *s;
+	        std::vector<float> *array;
+	        std::map<std::string, DataValue> *object;
+	    };
+	};	
+		</code></pre>
+		
+	<h4>第一步：Hash the keys</h4>
+			<pre><code class="cpp">
+	std::map<unsigned, DataValue> *object;
+			</code></pre>
+		
+	<h4>第二步：压平数据结构</h4>
+		<p> 属性名都可以变成字符串通过key来存取，例如stats.health = 100 <br />
+		so "stats.health" is represented by an unsigned containing the hashed value of "stats.health".
+		</p>
+		<pre><code class="cpp">
+	enum class DataType {BOOL, FLOAT, STRING, OBJECT, ARRAY};
+	struct Entry
+	{
+	    unsigned key;
+	    DataType type;
+	    union {
+	        bool b;
+	        float f;
+	        std::string *s;
+	        std::vector<float> *array;
+	    };
+	};
+	std::vector<Entry> data;
+		</code></pre>
+		<p> 查找key可以线性查找vector，可以排序这个数组进行二分查找，会更快 </p>
+		
+	<h4>第三步：进一步优化，分成多个数组</h4>
+		<pre><code class="cpp">
+	enum class DataType {BOOL, FLOAT, STRING, OBJECT, ARRAY};
+	struct Value
+	{
+	    union {
+	        bool b;
+	        float f;
+	        std::string *s;
+	        std::vector<float> *array;
+	    }
+	};
+	std::vector<unsigned> keys;
+	std::vector<DataType> types;
+	std::vector<Value> values;			
+		</code></pre>
+		<p> 目的是查找key时可以chche友好 </p>
+	
+	<h4>第四步：合并数组</h4>
+		<p> 因为三个数组的数量是一样的，可定义以下结构表示： </p>
+		<pre><code class="cpp">
+	int capacity;
+	int size;
+	unsigned *keys;
+	DataType *types;
+	Value *values;			
+		</code></pre>
+		<p> 这样三个数组可以同时分配，存储在一个连续的大buffer里，分配空间时可以用以下代码： </p>
+		<pre><code class="cpp">
+	char *buffer = allocate(capacity * (sizeof(unsigned) + sizeof(DataType) + sizeof(Value));
+	keys = (unsigned *)buffer;
+	types = (DataType *)(keys + capacity);
+	values = (Value *)(types + capacity);			
+		</code></pre>
+	
+	<h4>第五步：去掉STL，优化Value部分</h4>
+		<p> struct Value中仍然有STL，老办法优化存储在一个大buffer中 </p>
+		<pre><code class="cpp">
+	struct {
+	    char *data;
+	} s;
+	struct {
+	    int capacity;
+	    int size;
+	    float *data;
+	} array;
+	struct value_buffer
+	{
+	    char *p;
+	    unsigned capacity;
+	    unsigned size;
+	};
+	
+	void *allocate_memory(value_buffer &vb, unsigned size)
+	{
+	    if (vb.size + size > vb.capacity)
+	        return nullptr;
+	    auto res = vb.p + vb.size;
+	    vb.size += size;
+	    return res;
+	}			
+		</code></pre>
+		
+	<h4>第六步：进一步优化</h4>
+		<p> 因为所有的Value数据都存在一个Buffer里，只要数据容量不是太大，不超过64K，数据的offset与size都可以只用16位 </p>
+		<pre><code class="cpp">
+	struct Data {
+	    uint16_t offset;
+	    uint16_t size;
+	};
+	struct Value
+	{
+	    union {
+	        bool b;
+	        float f;
+	        Data data;
+	    }
+	};		
+		</code></pre>	
+	<h4>第七步：合并buffer， Header 与 Value可以放在一个Buffer里，一个从头开始分配，一个从尾部开始分配</h4>
+		<p> ---------------------------------------------------------- <br />
+			| Header      | ........ free space ........ | Values     | <br />
+			----------------------------------------------------------v <br />
+		</p>
