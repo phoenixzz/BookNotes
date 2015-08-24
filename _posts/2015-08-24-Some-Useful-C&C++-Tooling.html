@@ -1,0 +1,58 @@
+---
+　　layout: default
+　　title: 一些有用的C/C++实用工具
+---
+
+　　<h2>{{ page.title }}</h2>
+
+	<h4>代码格式：</h4>
+		<p> ClangFormat </p>
+		<p> <a href="http://clang.llvm.org/docs/ClangFormat.html">ClangFormat</a> </p>
+		<p> will help you codify your style and format your code for you to match the style. Simply write the code however you want, <br />
+			 and run the formatter on it before commiting it. </p>
+			 
+	<h4>Linters: </h4>
+		<p> Flint / Flint++ </p>
+		<p> <a href="https://github.com/facebook/flint">Flint</a> </p>
+		<p> <a href="https://github.com/L2Program/FlintPlusPlus">Flint++</a> </p>
+		<p> Flint++是Flint的一个 fork， 其不包含任何第三方依赖库 </p>
+		<p> While not quite full-on static analyzers, both can be used for finding potential issues in your code ahead of time. <br />
+			 Linters can look at individual files in isolation; you don’t have to wait for long recompiles like you would with a static analyzer.</p>
+	
+	<h4>静态分析：</h4>
+		<p> Scan-build </p>
+		<p> <a href="http://clang-analyzer.llvm.org/scan-build.html">Scan-build</a> </p>
+		<p> Scan-view will emit and open an html file that shows a list of the errors it detected. <br />
+			 It will insert hyperlinks into the resulting document that step you through how certain conditions could lead to a null pointer dereference,<br />
+			 for example. You can also save and share those html files with others in the project. </p>
+	
+	<h4>运行时分析：</h4>	
+		<p> ASan and UBSan </p>
+		<p> 其实包含Clang的一系列工具， See the list
+			<a href="http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation">here</a> </p>
+	
+	<h4>头文件分析：</h4>	
+		<p> Include What You Use </p>
+		<p> <a href="https://github.com/include-what-you-use/include-what-you-use">Include What You Use (IWYU) </a> </p>
+		<p> It helps you find unused or unnecessary #include preprocessor directives. <br />
+			It can also help cut down on recompiles by recommending forward declarations under certain conditions. </p>
+			
+	<h4>快速预编译：</h4>	
+		<p>ccache</p>
+		<p><a href="https://ccache.samba.org/">ccache</a> greatly improves recompile times by caching
+				the results of parts of the compilation process. </p>
+		<p>distcc</p>
+		<p><a href="https://github.com/distcc/distcc">distcc</a> is a distributed build system.</p>
+			
+	<h4>Fuzzers: </h4>	
+		<p>American Fuzzy Lop</p>
+		<p><a href="http://lcamtuf.coredump.cx/afl/">American Fuzzy Lop</a> (AFL) is a neat program
+		that performs fuzzing on programs <br />
+		that take inputs from files and repeatedly runs the program, modifies the
+		input trying to get full code coverage, <br /> and tries to find crashes.  </p>
+	
+	<h4>反编译: </h4>
+		<p>gobjdump</p>
+		<p>If you really need to make sure the higher level code you’re writing is getting <br />
+		translated into the assembly your expecting, <code>gobjdump -S</code> will intermix the <br />
+		emitted binary’s disassembled assembly and the source code. </p>
