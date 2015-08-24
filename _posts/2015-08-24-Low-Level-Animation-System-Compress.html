@@ -1,0 +1,72 @@
+---
+　　layout: default
+　　title: 低等级动画系统的数据压缩与优化存取
+---
+
+　　<h2>{{ page.title }}</h2>
+
+	<h4>关键帧压缩：</h4>
+	<p> 简单的采用线性插值的方式，We can also drop all those key frames that can be interpolated from the neighbor key frames.
+		<br />	The method checks all key frames from first to last and removes key frames that can be interpolated from the previous and the following key frame. <br />
+		 The method allows for a certain error and is therefore a “lossy” compression. 可以视作一种有损压缩，其误差值需要仔细考量。</p>
+	<p> 一种改进： we could compute an error value for each key frame which describes the error that results if this key frame is removed. <br />
+		 Then remove the key frame with the smallest error, Then we again remove the key frame with the smallest error. <br />
+		  In each iteration we remove that least important key frame.
+	</p>
+	<p> 可变误差方法: 
+		越接近根节点的骨骼误差越重要，叶子节点的骨骼误差不是那么重要。<br />
+		 We should use a low error threshold for the root bone and can use higher thresholds for hand or feet bones. <br />
+		 And slow animations are more visible than errors in fast movement <br />
+		 close-up animations are more visible than errors in animation which is only played in the background of a scene
+	</p>
+		
+	<h4> 四元数压缩：</h4>
+	
+		<p> 
+			对于Vector3 类型的数据， 采用16位存储每个float， 对于-10m to 10m大小，误差在0.3 mm <br />
+			对于四元数数据，我们知道1 = x^2 + y^2 + z^2 + w^2 ， 找到最大的component 后，其实我们只需要存储三个float即可<br />
+			we use 2 bits to store the index of the largest component, then 10 bits each to store the value of the remaining three components.<br />
+			因为不存储最大的数，the remaining ones must be in the range (-1/sqrt(2), 1/sqrt(2)) <br />
+			So we use the 10 bits to quantize a value in that range, giving us a precision of 0.0014.<br />			
+		</p>
+		<p> 原文见 <a href="http://bitsquid.blogspot.com/2011/10/low-level-animation-part-2.html">http://bitsquid.blogspot.com/2011/10/low-level-animation-part-2.html</a></p>
+		<p> 本文主要讨论数据存储效率的问题。 我们应该按照时间顺序来存储数据，</p>
+		<p> 考虑下
+			We need (t_i, A_i), (t_i+1, A_i+1) and (s_j, B_j), (s_j+1, B_j+1) where t_i <= t <= t_i+1 and s_j <= t <= s_j+1. This is our ”hot” data, <br />
+			具体的插值计算通过这个 ”hot” data就可以得出，所以create an additional data structure, an array with the currently active curve points for a playing animation instance. <br />
+			所以只要我们不存取新的curve points，只需要这个 ”hot” data就可以计算动画了。<br />	
+			需要存取新的curve points时，when we reach the time t_i+1 we will need to fetch the new curve point (t_i+2, A_i+2) <br /> 
+			and when we reach the time s_j+1 we will need to fetch (s_j+2, B_j+2). <br />
+			   t0 <= t1 <= s0 <= s1 <= t2 <= t3 <= s2 <= t4 <= t5  		  <br />
+			  t0A0  t1A1  s0B0  s1B1  t2A2  t3A3  s2B2  t4A4  t5A5...     <br />
+			our animation player only needs to keep a single pointer into the animation stream. <br />
+			That pointer will always point to the next curve point that needs to be moved to the active list.
+		</p>
+		
+		<p> Note the excellent cache behavior this gives us. To fetch new curve points, <br />
+			we just move a pointer forward in memory. And then, to evaluate the curves, we just need to access our active array, <br />
+		 	a single continuous memory block. This gives us a grand total of just two memory accesses.
+		</p>
+		<p>
+			缺点是只支持顺序播放动画，若要支持跳到动画某一帧的功能，需要增加一个“jump frames”索引表，<br />
+			A jump frame consists of the state of the active array at some point in time, together with an offset into the data stream. 
+		</p>	
+		
+	
+	<h4> 曲线多项式拟合： </h4>
+		<p> 原文见 <a href="http://bitsquid.blogspot.com/2009/11/bitsquid-low-level-animation-system.html">http://bitsquid.blogspot.com/2009/11/bitsquid-low-level-animation-system.html</a></p>
+		<p> 前提条件：<br />
+			(a) we can keep the error below a specified threshold, <br />
+		 	(b) the curve representation is small (good compression rate),<br />
+		  	(c) the curve is reasonably smooth <br />
+		  	(d) it does not take too long to evaluate.<br />
+			<br />  
+			   we currently use a hermite spline with implicitly computed derivatives.<br />
+			   To do the curve fitting we just check the error in all curve intervals, <br />
+			   find the interval D_i D_i+1 with the largest error and split it in half by introducing a new data point at (t_i + t_i+1)/2. <br />
+			   We repeat this until the error in all intervals is below a specified threshold value. <br />
+		</p>	   
+		<p> Summarize, 48 bits per Vector3 curve point and 32 bits per quaternion curve point, plus 16 bits for the time stamp. 
+		</p>
+		
+	
