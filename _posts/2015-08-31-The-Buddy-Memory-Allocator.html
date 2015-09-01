@@ -25,17 +25,17 @@
 		</code></pre>	
 		
 		<pre><code>
-			struct Preamble
-			{
-			    unsigned size;
-			    ...
-			};
+		struct Preamble
+		{
+		    unsigned size;
+		    ...
+		};
 
-			void free(void *p)
-			{
-			    Preamble *pre = (Preamble *)p - 1;
-			    unsigned size = pre-&gt;size;
-			}
+		void free(void *p)
+		{
+		    Preamble *pre = (Preamble *)p - 1;
+		    unsigned size = pre-&gt;size;
+		}
 		</code></pre>		
 	</p>
 	<p> 这种方法的问题是额外的存储空间可能会引起内存对齐问题，例如我们想分配4 K 的内存，但OS必须返回8K，为了存储额外的前置内容。</p>
@@ -71,20 +71,23 @@
 		 If the list of blocks of the bigger size is also empty, we can go to the even bigger size, etc.<br />
 		To make things easier for us, let's introduce the concept of levels. We say that the single block that we start with, representing the entire buffer, is at level 0.<br />
 		 When we split that we get two blocks at level 1. Splitting them, we get to level 2, etc.
-		<pre><code>	if the list of free blocks at level n is empty
-	    			allocate a block at level n-1 (using this algorithm)
-	    			split the block into two blocks at level n
-	    			insert the two blocks into the list of free blocks for level n
-					remove the first block from the list at level n and return it
+		<pre><code>	
+			if the list of free blocks at level n is empty
+	    	allocate a block at level n-1 (using this algorithm)
+	    	split the block into two blocks at level n
+	    	insert the two blocks into the list of free blocks for level n
+			remove the first block from the list at level n and return it
 		</code></pre>
-		<pre><code>	static const int MAX_LEVELS = 32;
-					void *_free_lists[MAX_LEVELS];
+		<pre><code>
+			static const int MAX_LEVELS = 32;
+			void *_free_lists[MAX_LEVELS];
 		</code></pre>
 		The prev and next pointers for the lists are stored directly in the free blocks themselves. <br />
 		We can also note some mathematical properties of the allocator:<br />
-		<pre><code>	total_size == (1&lt;&lt;num_levels) * leaf_size
-					size_of_level(n) == total_size / (1&lt;&lt;n)
-					max_blocks_of_level(n) = (1&lt;&lt;n)
+		<pre><code>	
+			total_size == (1&lt;&lt;num_levels) * leaf_size
+			size_of_level(n) == total_size / (1&lt;&lt;n)
+			max_blocks_of_level(n) = (1&lt;&lt;n)
 		</code></pre>
 		Note that MAX_LEVELS = 32 is probably enough since that gives a total size of leaf_size * 4 GB and we know leaf_size will be at least 16. <br />
 		(The leaf nodes must have room for the prev and next pointers of the  linked list and we assume a 64 bit system.)<br />
@@ -122,12 +125,13 @@
 		This means we can find out the state of the other block from the XORed bit. If it is 0, then both blocks are free. If it is 1 then it is just our block that is free.<br />	
 		
 		To find the level n of an allocated block we can use the algorithm:
-		<pre><code>	n = num_levels - 1
-					while n &gt; 0
-					    if block_has_been_split(ptr, n-1)
-					        return n
-					    n = n - 1
-					return 0
+		<pre><code>
+				n = num_levels - 1
+				while n &gt; 0
+				    if block_has_been_split(ptr, n-1)
+				        return n
+				    n = n - 1
+				return 0
 		</code></pre>
 		Since the leaf blocks can't be split, we only need <code>1 &lt;&lt; (num_levels - 1)</code> entries in the split index.<br />
 		This means that the cost of the split index is the same as for the merge index, 0.5 bits per block. <br />
