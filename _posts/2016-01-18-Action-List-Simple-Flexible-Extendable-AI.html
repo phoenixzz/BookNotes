@@ -1,0 +1,126 @@
+---
+　　layout: default
+　　title: Action List - 一种简单灵活可扩展的AI
+---
+
+　　<h2>{{ page.title }}</h2>
+
+       <p>原文地址<a href="http://gorillatactics.com/action-lists/">http://gorillatactics.com/action-lists/ </a></p>
+       <p> </p>
+       <p>Action Lists简单高效，虽然没有大型AI网络那么具有灵活的可扩展性，但易于实现相对复杂的紧急行为。</p>
+       <pre><code>
+            Action List is a list of tasks or behaviors that your game units work their way through one at a time. <br /> It is a form of finite state system, and could be described as a simple behavior tree with a single branch level. 
+       </code></pre>
+       
+       <h4>Step 1：写下AI的所有行为</h4>
+       <h4>Step 2：根据优先级排序，从低->高</h4>
+       <h4>Step 3：遍历行为，依次检查该行为是否可执行，同时检查“block”属性，“block”会阻止余下的Action Lists的执行。</h4>
+       <h4>是一种简单的有限状态机，缺点也就是过于简单了，但你可以扩展它。</h4>
+       
+       <p> 如果需要实现多任务的功能，可以引入Action Lanes的概念，Action Lanes是“block”属性的一种扩展，<br />
+            其可以让某些“车道”的Action Items被阻止，而某些“车道”的Action Items是可以继续执行的。<br />
+            一个Action Item 可以属于一个或多个Action Lanes，若它的“Blocking“ property 返回true，将阻止一个或多个Action Lanes的执行，<br />
+            其他Action Lanes不受影响。
+       </p>
+       
+       <p> 例子代码如下：</p>
+       	<pre><code>	
+			public interface IActionItem
+			{
+                bool Blocking { get; }
+                bool CanExecute();
+                void Execute();
+            }
+            
+            public class BreakDoor : IActionItem
+            {
+                Unit unit { get; set; }
+                public BreakDoor(Unit unit)
+                {
+                    this.unit = unit;
+                }
+                public bool Blocking
+                {
+                    get
+                    {
+                        return unit.currentState == UnitState.BreakingDoor;
+                    }
+                }
+                public bool CanExecute()
+                {
+                    // in this condition, could I Execute?
+                }
+                public void Execute()
+                {
+                    // Doing something
+                }
+            }
+		</code></pre>
+
+       <p> 对于 Action List 本身，可以用简单的List </p>
+          <pre><code>	
+                List<IActionItem>  actionList = new  List<IActionItem> ();
+                public Unit()
+                {
+                    BreakDoor break_door = new  BreakDoor(this);
+                    actionList.add(break_door);
+                    AttackPlayer attack_player = new  AttackPlayer(this);
+                    actionList.add(attack_player);
+                    MoveToGoal move_player  = new MoveToGoal(this);
+                    actionList.add(move_player);
+                }
+          </code></pre>
+          
+      <p> 每帧的更新行为如下： </p>
+          <pre><code>	
+                
+                public void UpdateActionList()
+                {
+                    foreach(IActionItem item in actionList)
+                    {
+                        if(item.CanExecute()) { item.Execute(); }
+                        if(item.Blocking) { break; }
+                    }
+                }
+          </code></pre>
+      <p> 加入action lanes功能，会更复杂一些  </p>
+           <pre><code>	
+                public enum ActionLanes
+                {
+                    None = 1,
+                    Action = 2,
+                    MoveMent = 4,
+                    All = 7,
+                }
+                public interface IActionItem
+                {
+                    ActionLanes ActionLane { get; set; }
+                    bool Blocking { get; }
+                    bool CanExecute();
+                    void Execute();
+                }
+                public void UpdateActionListWithLeans()
+                {
+                    ActionLanes blockingleans = ActionLanes.None;
+                    foreach(IActionItem item in actionList)
+                    {
+                        if((blockingleans & item.ActionLane) == ActionLanes.None)
+                        {
+                            if(item.CanExecute()) { item.Execute(); }
+                            if(item.Blocking) { blockingleans = blockingleans | item.ActionLane; }
+                        }
+                        
+                        if(blockingleans == ActionLanes.All)
+                        {
+                            break;
+                        }
+                    }
+                }
+          </code></pre>       
+          
+      <h4>总结：</h4>
+	  <p> Action lists更容易实现和维护</p>
+      <p> Action lists可以用于建模可识别的优先级系统</p>
+      <p> Action lists比较容易扩展其他功能</p>
+      
+　　<p>{{ page.date | date_to_string }}</p>
