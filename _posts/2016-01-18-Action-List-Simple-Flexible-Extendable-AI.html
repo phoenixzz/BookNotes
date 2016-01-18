@@ -9,7 +9,7 @@
        <p> </p>
        <p>Action Lists简单高效，虽然没有大型AI网络那么具有灵活的可扩展性，但易于实现相对复杂的紧急行为。</p>
        <pre><code>
-            Action List is a list of tasks or behaviors that your game units work their way through one at a time. <br /> It is a form of finite state system, and could be described as a simple behavior tree with a single branch level. 
+         Action List is a list of tasks or behaviors that your game units work their way through one at a time. <br /> It is a form of finite state system, and could be described as a simple behavior tree with a single branch level. 
        </code></pre>
        
        <h4>Step 1：写下AI的所有行为</h4>
@@ -19,14 +19,13 @@
        
        <p> 如果需要实现多任务的功能，可以引入Action Lanes的概念，Action Lanes是“block”属性的一种扩展，<br />
             其可以让某些“车道”的Action Items被阻止，而某些“车道”的Action Items是可以继续执行的。<br />
-            一个Action Item 可以属于一个或多个Action Lanes，若它的“Blocking“ property 返回true，将阻止一个或多个Action Lanes的执行，<br />
-            其他Action Lanes不受影响。
+            一个Action Item 可以属于一个或多个Action Lanes，若它的“Blocking“ property 返回true，将阻止一个或多个Action Lanes的执行，其他Action Lanes不受影响。
        </p>
        
        <p> 例子代码如下：</p>
-       	<pre><code>	
-			public interface IActionItem
-			{
+       	<pre><code>
+            public interface IActionItem
+            {
                 bool Blocking { get; }
                 bool CanExecute();
                 void Execute();
@@ -58,7 +57,7 @@
 		</code></pre>
 
        <p> 对于 Action List 本身，可以用简单的List </p>
-          <pre><code>	
+          <pre><code>
                 List<IActionItem>  actionList = new  List<IActionItem> ();
                 public Unit()
                 {
@@ -72,8 +71,7 @@
           </code></pre>
           
       <p> 每帧的更新行为如下： </p>
-          <pre><code>	
-                
+          <pre><code>                
                 public void UpdateActionList()
                 {
                     foreach(IActionItem item in actionList)
