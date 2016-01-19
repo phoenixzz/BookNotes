@@ -1,0 +1,126 @@
+---
+　　layout: default
+　　title: 关于Game Loop和Timestep的模式总结
+---
+
+　　<h2>{{ page.title }}</h2>
+
+　　<p>参考文档1 <a href="http://gameprogrammingpatterns.com/game-loop.html">http://gameprogrammingpatterns.com/game-loop.html</a></p>
+      <p>参考文档2 <a href="http://gafferongames.com/game-physics/fix-your-timestep/">http://gafferongames.com/game-physics/fix-your-timestep/</a></p>
+      <p>参考文档3 <a href="http://www.koonsolo.com/news/dewitters-gameloop/">http://www.koonsolo.com/news/dewitters-gameloop/</a></p>
+      <p>Unity的Game Loop流程图 <a href="http://docs.unity3d.com/Manual/ExecutionOrder.html">http://docs.unity3d.com/Manual/ExecutionOrder.html</a></p>
+      
+	<p> </p>
+    
+    <h4>方法一：循环，有多快，跑多快：</h4>
+    <p> 缺点：慢的机器上太慢，快的机器上跑的太快</p>
+    <pre><code class="cpp">
+        while( game_is_running )
+        {
+            update_game();
+            display_game();
+        }
+    </code></pre>
+    
+    <h4>方法二：FPS dependent on Constant Game Speed（恒定FPS）：</h4>
+    <p> 缺点：慢的机器上如果不满足帧数会跑的更慢，逻辑更新甚至会慢得无法玩，快的机器上没问题，但会浪费CPU能力，虽然节约电力。</p>
+    <pre><code class="cpp">
+        const int FRAMES_PER_SECOND = 60;
+        const int MS_PER_FRAME = 1000 / FRAMES_PER_SECOND;
+
+        while (game_is_running)
+        {
+            double start = getCurrentTime();
+            
+            update_game();
+            display_game();
+
+            sleep( MS_PER_FRAME - (getCurrentTime() - start) );
+        }
+    </code></pre>
+    
+    <h4>方法三：Game Speed dependent on Variable FPS（可变FPS）：</h4>
+    <p> 缺点：慢的机器上在渲染特别慢的地方逻辑会卡住，逻辑更新会变慢，也影响用户的输入响应；<br />
+        快的机器上也会有rounding error问题，因为浮点数运算会有误差，性能高的机器上update_game会运行更多次，如果函数里浮点数运算太多，会累积很大的误差，<br />
+        物理系统表现为不稳定。</p>
+    <pre><code class="cpp">
+
+        double lastTime = getCurrentTime();
+        while (game_is_running)
+        {
+            double current = getCurrentTime();
+            double elapsed = current - lastTime;
+            
+            update_game(elapsed);
+            display_game();
+
+        }
+    </code></pre>
+   
+    <h4>方法四：Constant Game Speed with Maximum FPS（降低渲染帧数来维持恒定FPS）：</h4>
+    <p>游戏以恒定的50帧/秒更新逻辑，渲染函数则执行得尽可能的快，若游戏跑的速度快过50帧/秒，渲染部分某些帧是相同的，显示上也看起来游戏以50帧/秒来运行，<br />
+        当在慢的机器上运行时，帧数会下降直到update_game循环达到最大MAX_FRAMESKIP次，实际上渲染帧数掉到了5 (TICKS_PER_SECOND / MAX_FRAMESKIP)<br />
+        缺点：在慢的机器上渲染帧数会下降，游戏会不流畅。快的机器上没问题，但会浪费CPU能力，虽然节约电力。</p>
+    <pre><code class="cpp">
+        const int TICKS_PER_SECOND = 50;
+        const int SKIP_TICKS = 1000 / TICKS_PER_SECOND;
+        const int MAX_FRAMESKIP = 10;
+        
+        double lag = 0.0;
+        int loops = 0;
+        double lastTime = getCurrentTime();
+        
+        while (game_is_running)
+        {
+            double current = getCurrentTime();
+            double elapsed = current - lastTime;
+            lastTime = current;
+            lag += elapsed;
+            loops = 0;
+            
+            while (lag >= SKIP_TICKS && loops < MAX_FRAMESKIP)
+            {                
+                update_game();
+                lag -= SKIP_TICKS;
+                loops++;
+            }
+            display_game();
+        }
+    </code></pre>    
+    
+    <h4>方法五：Constant Game Speed independent of Variable FPS（恒定更新帧率无关变化的FPS）：</h4>
+    <p>前一种方案的增强版，主要用于处理低帧率的情况，主要更改在display_game函数部分，增加了一点复杂性，<br />
+         interpolation的引入是加了一点预测的功能，主要用于两个渲染帧之间的位置插值，通过这种方案，在视觉上提高了帧数。
+    </p>
+    <pre><code class="cpp">
+        const int TICKS_PER_SECOND = 50;
+        const int SKIP_TICKS = 1000 / TICKS_PER_SECOND;
+        const int MAX_FRAMESKIP = 10;
+        
+        double lag = 0.0;
+        int loops = 0;
+        double lastTime = getCurrentTime();
+        
+        while (game_is_running)
+        {
+            double current = getCurrentTime();
+            double elapsed = current - lastTime;
+            lastTime = current;
+            lag += elapsed;
+            loops = 0;
+            
+            while (lag >= SKIP_TICKS && loops < MAX_FRAMESKIP)
+            {                
+                update_game();
+                lag -= SKIP_TICKS;
+                loops++;
+            }
+            
+            interpolation = float( lag ) / float( SKIP_TICKS );
+            display_game( interpolation );
+
+        }
+    </code></pre>
+    
+    
+    <p>{{ page.date | date_to_string }}</p>
