@@ -1,0 +1,45 @@
+---
+　　layout: default
+　　title: Uncharted 4中AI开发经验
+---
+
+　　<h2>{{ page.title }}</h2>
+       <p>原文地址<a href="http://allenchou.net/2016/05/a-brain-dump-of-what-i-worked-on-for-uncharted-4/">http://allenchou.net/2016/05/a-brain-dump-of-what-i-worked-on-for-uncharted-4/ </a></p>
+       <p>中文地址<a href="http://allenchou.net/2016/05/a-brain-dump-of-what-i-worked-on-for-uncharted-4-chinese/">http://allenchou.net/2016/05/a-brain-dump-of-what-i-worked-on-for-uncharted-4-chinese/</a></p>
+       <p> </p>
+       
+       <h4>The Post System NPC巡逻岗位</h4>
+       <p> 大部分工具自动生成，少部分人工摆放，通过不同岗位的分数，AI选取评分最高的位置。</p>
+       
+       <h4>Buddy Follow 伙伴跟随</h4>
+       <p> NPC在玩家身后的一个扇形取分布跟随点，然后检测：<br />
+            玩家位置到跟随点无碰撞；<br />
+            从跟随点到跟随点朝玩家正方向相加取一个投射点无碰撞；<br />
+            这个投射点到玩家位置无碰撞</p>            
+       <p> 攀爬功能也需要人工摆放辅助点，这里有个问题，<br />
+            If the player quickly switch between climbing and non-climbing states, buddies would oscillate pretty badly between the two states.<br />
+            伙伴会在两个状态间迅速转换，需要加入hysteresis（迟滞）的概念。</p>
+            
+      <h4> Buddy Lead 伙伴带领</h4>      
+      <p> 设计师预先设置好splines 曲线，存在多条路线时通过脚本选择。<br />
+            玩家的位置投射到spline曲線上，再往前延伸设定为带领参考点，当带领参考点超越spline曲線上标记为等待点的控制点时，伙伴会前往下个等待点，<br />
+            若玩家回头，伙伴必须等带领参考点离这次推进最远的等待点一定距离才会回头。<br />
+            根据玩家与伙伴间的距离，一些“速度平面”会沿着splines 曲线放置，伙伴会根据位置不同设置不同的动画播放速度。</p>
+            
+      <h4>Buddy Cover Share 掩体公用</h4>        
+      <p> If the projected player position based on velocity lands within a rectangular boundary around the buddy’s cover post, the buddy aborts current in-cover behavior and quickly hunkers against the cover wall.</p>
+      <p> 玩家向移动方向投射的点如果落在伙伴掩体边的一个方块内，伙伴就马上取消Cover行为并快速靠近掩体。</p>
+      
+      <h4>医疗救援战友</h4>       
+      <p> 略      </p>
+      
+      <h4>Stealth Grass隐蔽草地</h4>         
+      <p> 在場景編輯器中的nav mesh增加了隐蔽草地的tag </p>      
+      
+      <h4> Bayer Matrix for Dithering混色用的贝尔矩阵</h4>  
+      <p> 摄像机距离场景物件很近时，靠近摄像机的像素需要淡出，使用混色(dithering)https://en.wikipedia.org/wiki/Dither </p>
+      <p> 使用混色技巧搭配貝爾矩陣(Bayer matrix)，利用一個預先決定的點陣模板來決定哪些像素可以捨棄而不渲染<br />
+            https://en.wikipedia.org/wiki/Ordered_dithering
+            結果就是產生半透明的錯覺</p>   
+      
+　　<p>{{ page.date | date_to_string }}</p>
